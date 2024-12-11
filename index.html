@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autómatas Finitos</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <h1>Creador de Autómatas Finitos</h1>
+
+    <div id="form-container">
+        <label for="input-states">Estados (separados por comas):</label>
+        <input type="text" id="input-states" placeholder="Ej: q0,q1,q2">
+
+        <label for="input-initial-state">Estado inicial:</label>
+        <input type="text" id="input-initial-state" placeholder="Ej: q0">
+
+        <label for="input-final-states">Estados finales (separados por comas):</label>
+        <input type="text" id="input-final-states" placeholder="Ej: q2">
+
+        <label for="input-transitions">Transiciones (formato q0,a,q1):</label>
+        <input type="text" id="input-transitions" placeholder="Ej: q0,a,q1;q1,b,q2">
+
+        <button id="generate-btn">Generar Autómata</button>
+    </div>
+
+    <div id="automata-container">
+        <svg id="automata-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <h2>Verificar cadena</h2>
+    <input type="text" id="input-string" placeholder="Ingrese una cadena">
+    <button id="validate-btn">Validar Cadena</button>
+    <p id="validation-result"></p>
+
+    <button id="manual-mode-btn">Modo Manual: Dibujar Autómata</button>
+
+    <div id="manual-transitions">
+        <h3>Ingresar Transiciones Manualmente</h3>
+        <label for="from-state">Desde (Estado):</label>
+        <input type="text" id="from-state" placeholder="Ej: q0">
+
+        <label for="symbol">Símbolo:</label>
+        <input type="text" id="symbol" placeholder="Ej: 0">
+
+        <label for="to-state">Hasta (Estado):</label>
+        <input type="text" id="to-state" placeholder="Ej: q1">
+
+        <button id="add-transition-btn">Agregar Transición</button>
+    </div>
+
+    <div id="generated-data">
+        <h3>Datos generados:</h3>
+        <p id="generated-states"></p>
+        <p id="generated-initial-state"></p>
+        <p id="generated-final-states"></p>
+        <p id="generated-transitions"></p>
+    </div>
+
+    <script src="script.js" defer></script>
+
+</body>
+</html>
