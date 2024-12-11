@@ -1,0 +1,238 @@
+/* Global */
+body {
+    font-family: 'Poppins', Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(120deg, #6a11cb, #2575fc);
+    color: #fff;
+    line-height: 1.6;
+    overflow-x: hidden;
+}
+
+h1, h2 {
+    text-align: center;
+    margin: 20px 0;
+    color: #fff;
+    font-weight: 800;
+    text-transform: uppercase;
+    text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Containers */
+#form-container, #automata-container {
+    margin: 20px auto;
+    text-align: center;
+    padding: 30px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 800px;
+    backdrop-filter: blur(10px);
+    animation: fadeIn 1.5s ease-out;
+}
+
+/* Inputs and Buttons */
+input, button {
+    padding: 15px;
+    margin: 10px;
+    width: 100%;
+    max-width: 300px;
+    border: none;
+    border-radius: 30px;
+    font-size: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+input:focus {
+    outline: none;
+    border-color: #6a11cb;
+    box-shadow: 0 0 10px #6a11cb, 0 0 40px rgba(106, 17, 203, 0.6);
+}
+
+button {
+    background: linear-gradient(135deg, #6a11cb, #2575fc);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    border: none;
+    text-transform: uppercase;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+button:hover {
+    background: linear-gradient(135deg, #2575fc, #6a11cb);
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+/* Automata */
+#automata-container {
+    position: relative;
+    background: rgba(255, 255, 255, 0.15);
+    border: 2px dashed rgba(255, 255, 255, 0.5);
+    height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    backdrop-filter: blur(5px);
+    animation: slideUp 1.5s ease-out;
+}
+
+.state {
+    width: 70px;
+    height: 70px;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 70px;
+    position: absolute;
+    background: radial-gradient(circle, #6a11cb, #2575fc);
+    color: #fff;
+    font-weight: bold;
+    font-size: 16px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    animation: popIn 0.8s ease forwards;
+}
+
+.state:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 15px #fff, 0 0 30px rgba(255, 255, 255, 0.5);
+}
+
+.state.initial::before {
+    content: '→';
+    position: absolute;
+    left: -30px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #fff;
+    font-size: 18px;
+    text-shadow: 0 0 10px #fff;
+}
+
+.state.final {
+    border: 3px double #fff;
+}
+
+/* Transition Labels */
+.transition-label {
+    position: absolute;
+    font-weight: bold;
+    color: #ff4081;
+    background: rgba(255, 64, 129, 0.2);
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    box-shadow: 0 4px 10px rgba(255, 64, 129, 0.3);
+    transition: transform 0.3s ease;
+}
+
+.transition-label:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(255, 64, 129, 0.4);
+}
+
+/* Validation Result */
+#validation-result {
+    font-size: 22px;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 20px;
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+#validation-result.accepted {
+    color: #4caf50;
+}
+
+#validation-result.rejected {
+    color: #ff5252;
+}
+
+#validation-result.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Generated Data */
+#generated-data {
+    display: none;
+    text-align: center;
+    margin-top: 20px;
+}
+
+#generated-data p {
+    font-size: 18px;
+    font-weight: bold;
+    color: #fff;
+}
+
+/* Manual Transitions */
+#manual-transitions {
+    margin: 20px 0;
+    text-align: center;
+}
+
+#manual-transitions input {
+    width: 100px;
+    margin: 5px;
+    border: none;
+    border-radius: 20px;
+    text-align: center;
+}
+
+#manual-transitions button {
+    background: linear-gradient(135deg, #43e97b, #38f9d7);
+    color: white;
+    border: none;
+    border-radius: 25px;
+    padding: 12px 20px;
+    font-size: 16px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+#manual-transitions button:hover {
+    background: linear-gradient(135deg, #38f9d7, #43e97b);
+    transform: scale(1.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes popIn {
+    0% {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
