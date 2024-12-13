@@ -32,6 +32,30 @@ h1, h2 {
     animation: fadeIn 1.5s ease-out;
 }
 
+.div-container {
+    display: flex;
+    justify-content: space-between; /* Esto separa los elementos de extremo a extremo */
+    align-items: center; /* Esto centra verticalmente los elementos */
+}
+
+.div-container label {
+    flex-grow: 1; /* Esto hace que el label ocupe todo el espacio disponible y lo centre */
+    text-align: center; /* Asegura que el texto dentro del label esté centrado */
+}
+
+.div-container input {
+    margin-left: auto; /* Mueve el input hacia la derecha */
+}
+
+.validar-cadena {
+    text-align: center;
+}
+
+#automata-svg {
+    width: 100%;
+    height: 500px;
+}
+
 /* Inputs and Buttons */
 input, button {
     padding: 15px;
@@ -236,3 +260,11 @@ button:hover {
     }
 }
 
+#manual-transitions button {
+    transition: background-color 0.3s ease;
+}
+
+#manual-transitions button.active {
+    background: linear-gradient(135deg, #43e97b, #38f9d7);
+    box-shadow: 0 0 15px rgba(67, 233, 123, 0.5);
+}
