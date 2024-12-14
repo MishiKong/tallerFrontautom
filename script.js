@@ -2,406 +2,263 @@ document.getElementById('generate-btn').addEventListener('click', drawAutomata);
 document.getElementById('validate-btn').addEventListener('click', validateString);
 document.getElementById('manual-mode-btn').addEventListener('click', enableManualMode);
 
-let automaton = {};
 let isManualMode = false;
-let manualStates = [];
-let manualTransitions = [];
-let selectedState = null;
-let draggedState = null;
+let selectedStates = [];
+let isInitialStateMode = false;
+let isFinalStateMode = false;
 let isTransitionMode = false;
 let transitionStartState = null;
 
+// Objeto para almacenar el autómata
+let automaton = {
+    states: [],
+    initialState: null,
+    finalStates: [],
+    transitions: {}
+};
+
 function enableManualMode() {
     isManualMode = !isManualMode;
-    const container = document.getElementById('automata-container');
-    const svg = container.querySelector('#automata-svg');
-    
-    if (isManualMode) {
-        // Clear previous content
-        svg.innerHTML = '';
-        svg.style.cursor = 'crosshair';
-        
-        // Add events for manual mode
-        svg.addEventListener('click', createStateOnSVG);
-        svg.addEventListener('mousemove', dragState);
-        svg.addEventListener('mouseup', dropState);
-    } else {
-        // Remove events for manual mode
-        svg.removeEventListener('click', createStateOnSVG);
-        svg.removeEventListener('mousemove', dragState);
-        svg.removeEventListener('mouseup', dropState);
-        svg.style.cursor = 'default';
-    }
-
-    // Show/hide manual controls
+    const manualModeBtn = document.getElementById('manual-mode-btn');
     const manualControls = document.getElementById('manual-transitions');
-    const defaultControls = document.getElementById('form-container');
-    
-    manualControls.style.display = isManualMode ? 'block' : 'none';
-    defaultControls.style.display = isManualMode ? 'none' : 'block';
+    const automataContainer = document.getElementById('automata-container');
+    const svg = document.getElementById('automata-svg');
+
+    if (isManualMode) {
+        // Activar modo manual
+        manualModeBtn.textContent = 'Salir del Modo Manual';
+        manualControls.style.display = 'block';
+        svg.innerHTML = ''; // Limpiar el SVG
+        
+        // Reiniciar el autómata
+        automaton = {
+            states: [],
+            initialState: null,
+            finalStates: [],
+            transitions: {}
+        };
+        selectedStates = [];
+        
+        // Agregar eventos de clic al SVG para crear estados
+        svg.addEventListener('click', createState);
+        
+    } else {
+        // Desactivar modo manual
+        manualModeBtn.textContent = 'Modo Manual: Dibujar Autómata';
+        manualControls.style.display = 'none';
+        resetAllModes();
+    }
 }
 
-function createStateOnSVG(event) {
-    if (!isManualMode || isTransitionMode) return;
+function createState(event) {
+    if (!isManualMode || isTransitionMode || event.target !== event.currentTarget) return;
 
-    const svg = event.target.closest('svg');
-    const svgRect = svg.getBoundingClientRect();
-    const x = event.clientX - svgRect.left;
-    const y = event.clientY - svgRect.top;
+    const svg = event.currentTarget;
+    const rect = svg.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
 
-    // Create state
+    // Crear estado
+    const stateName = `q${automaton.states.length}`;
+    
+    // Crear grupo para el estado
     const stateGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
     stateGroup.classList.add('state-group');
-    stateGroup.dataset.id = `q${manualStates.length}`;
+    stateGroup.dataset.state = stateName;
 
-    const stateCircle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    stateCircle.setAttribute('cx', x);
-    stateCircle.setAttribute('cy', y);
-    stateCircle.setAttribute('r', 35);
-    stateCircle.setAttribute('fill', 'url(#stateGradient)');
-    stateCircle.setAttribute('stroke', 'white');
-    stateCircle.setAttribute('stroke-width', '3');
+    // Crear círculo
+    const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    circle.setAttribute('cx', x);
+    circle.setAttribute('cy', y);
+    circle.setAttribute('r', '35');
+    circle.setAttribute('fill', 'url(#stateGradient)');
+    circle.setAttribute('stroke', 'white');
+    circle.setAttribute('stroke-width', '3');
 
-    const stateText = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    stateText.setAttribute('x', x);
-    stateText.setAttribute('y', y);
-    stateText.setAttribute('text-anchor', 'middle');
-    stateText.setAttribute('dy', '5');
-    stateText.setAttribute('fill', 'white');
-    stateText.setAttribute('font-weight', 'bold');
-    stateText.textContent = `q${manualStates.length}`;
+    // Crear texto
+    const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    text.setAttribute('x', x);
+    text.setAttribute('y', y);
+    text.setAttribute('text-anchor', 'middle');
+    text.setAttribute('dy', '5');
+    text.setAttribute('fill', 'white');
+    text.textContent = stateName;
 
-    stateGroup.appendChild(stateCircle);
-    stateGroup.appendChild(stateText);
-    
-    // Events for the state
-    stateGroup.addEventListener('mousedown', startDragState);
+    // Agregar elementos al grupo
+    stateGroup.appendChild(circle);
+    stateGroup.appendChild(text);
+
+    // Agregar evento de clic al estado
     stateGroup.addEventListener('click', handleStateClick);
 
+    // Agregar al SVG
     svg.appendChild(stateGroup);
 
-    // Save state information
-    manualStates.push({
-        id: `q${manualStates.length}`,
-        x: x,
-        y: y,
-        element: stateGroup
-    });
-
+    // Actualizar el autómata
+    automaton.states.push(stateName);
     updateGeneratedData();
 }
 
 function handleStateClick(event) {
+    if (!isManualMode) return;
+    event.stopPropagation();
+
     const stateGroup = event.currentTarget;
-    const stateId = stateGroup.dataset.id;
-    
-    // Lógica de botón de estado inicial
-    const isInitialStateBtn = document.getElementById('set-initial-btn').classList.contains('active');
-    if (isInitialStateBtn) {
-        const svg = stateGroup.closest('svg');
-        // Quitar marca de estado inicial de todos los estados
-        svg.querySelectorAll('.state-group').forEach(group => {
-            group.querySelector('circle').setAttribute('stroke', 'white');
-            group.classList.remove('initial-state');
-        });
-        
-        // Marcar el estado actual como inicial
-        stateGroup.querySelector('circle').setAttribute('stroke', 'green');
-        stateGroup.classList.add('initial-state');
-        
-        // Deactivate initial state button after selection
-        document.getElementById('set-initial-btn').classList.remove('active');
-    }
-    
-    // Lógica de botón de estado final
-    const isFinalStateBtn = document.getElementById('set-final-btn').classList.contains('active');
-    if (isFinalStateBtn) {
+    const stateName = stateGroup.dataset.state;
+
+    if (isInitialStateMode) {
+        // Establecer estado inicial
+        setInitialState(stateGroup);
+    } else if (isFinalStateMode) {
         // Alternar estado final
-        stateGroup.classList.toggle('final-state');
-        const circle = stateGroup.querySelector('circle');
-        
-        if (stateGroup.classList.contains('final-state')) {
-            // Agregar borde discontinuo para estados finales
-            circle.setAttribute('stroke-dasharray', '5,5');
-        } else {
-            // Quitar borde discontinuo si se desmarca como final
-            circle.removeAttribute('stroke-dasharray');
-        }
-        
-        // Deactivate final state button after selection
-        document.getElementById('set-final-btn').classList.remove('active');
+        toggleFinalState(stateGroup);
+    } else if (isTransitionMode) {
+        // Manejar transiciones
+        handleTransitionState(stateGroup);
     }
 
     updateGeneratedData();
 }
 
-function createTransition(fromState, toState, symbol) {
-    const svg = fromState.closest('svg');
-    const fromX = parseFloat(fromState.querySelector('circle').getAttribute('cx'));
-    const fromY = parseFloat(fromState.querySelector('circle').getAttribute('cy'));
-    const toX = parseFloat(toState.querySelector('circle').getAttribute('cx'));
-    const toY = parseFloat(toState.querySelector('circle').getAttribute('cy'));
+function setInitialState(stateGroup) {
+    const svg = stateGroup.closest('svg');
+    const stateName = stateGroup.dataset.state;
 
-    // Verificar si es una transición al mismo estado
-    const isSelfTransition = fromState === toState;
-
-    if (isSelfTransition) {
-        // Crear transición circular
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        const radius = 35; // Radio del estado
-        
-        path.setAttribute('d', `
-            M ${fromX-radius} ${fromY} 
-            A ${radius*1.5} ${radius*1.5} 0 1 1 ${fromX+radius} ${fromY}
-        `);
-        path.setAttribute('fill', 'none');
-        path.setAttribute('stroke', '#ff4081');
-        path.setAttribute('stroke-width', '2');
-        path.setAttribute('marker-end', 'url(#arrowhead)');
-        path.dataset.from = fromState.dataset.id;
-        path.dataset.to = toState.dataset.id;
-
-        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        text.setAttribute('x', fromX + radius);
-        text.setAttribute('y', fromY - radius/2);
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('fill', '#ff4081');
-        text.textContent = symbol;
-
-        svg.appendChild(path);
-        svg.appendChild(text);
-    } else {
-        // Transición entre estados diferentes
-        // Calcular ángulo y distancia para ajustar la flecha
-        const dx = toX - fromX;
-        const dy = toY - fromY;
-        const angle = Math.atan2(dy, dx);
-        const length = Math.sqrt(dx*dx + dy*dy);
-
-        // Ajustar puntos de inicio y fin para no tocar directamente los estados
-        const stateRadius = 35;
-        const startX = fromX + Math.cos(angle) * stateRadius;
-        const startY = fromY + Math.sin(angle) * stateRadius;
-        const endX = toX - Math.cos(angle) * stateRadius;
-        const endY = toY - Math.sin(angle) * stateRadius;
-
-        // Crear línea de transición
-        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-        line.setAttribute('x1', startX);
-        line.setAttribute('y1', startY);
-        line.setAttribute('x2', endX);
-        line.setAttribute('y2', endY);
-        line.setAttribute('stroke', '#ff4081');
-        line.setAttribute('stroke-width', '2');
-        line.setAttribute('marker-end', 'url(#arrowhead)');
-        line.dataset.from = fromState.dataset.id;
-        line.dataset.to = toState.dataset.id;
-
-        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        text.setAttribute('x', (startX + endX) / 2);
-        text.setAttribute('y', (startY + endY) / 2);
-        text.setAttribute('text-anchor', 'middle');
-        text.setAttribute('fill', '#ff4081');
-        text.textContent = symbol;
-
-        svg.appendChild(line);
-        svg.appendChild(text);
-    }
-
-    // Guardar transición
-    manualTransitions.push({
-        from: fromState.dataset.id,
-        to: toState.dataset.id,
-        symbol: symbol
+    // Remover marca de estado inicial anterior
+    svg.querySelectorAll('.state-group').forEach(group => {
+        group.querySelector('circle').setAttribute('stroke', 'white');
     });
 
-    updateGeneratedData();
+    // Marcar nuevo estado inicial
+    stateGroup.querySelector('circle').setAttribute('stroke', 'green');
+    automaton.initialState = stateName;
+    resetAllModes();
 }
 
-function startDragState(event) {
-    if (!isManualMode) return;
-    
-    draggedState = event.currentTarget;
-    draggedState.classList.add('dragging');
-    
-    // Guardar offset del ratón respecto al estado
-    const svgRect = draggedState.closest('svg').getBoundingClientRect();
-    const stateRect = draggedState.getBoundingClientRect();
-    
-    draggedState.dataset.offsetX = event.clientX - stateRect.left + svgRect.left;
-    draggedState.dataset.offsetY = event.clientY - stateRect.top + svgRect.top;
-}
+function toggleFinalState(stateGroup) {
+    const circle = stateGroup.querySelector('circle');
+    const stateName = stateGroup.dataset.state;
 
-function dragState(event) {
-    if (!draggedState || !isManualMode) return;
-    
-    const svg = event.target.closest('svg');
-    const svgRect = svg.getBoundingClientRect();
-    
-    const offsetX = parseFloat(draggedState.dataset.offsetX);
-    const offsetY = parseFloat(draggedState.dataset.offsetY);
-    
-    const newX = event.clientX - svgRect.left;
-    const newY = event.clientY - svgRect.top;
-    
-    const circle = draggedState.querySelector('circle');
-    const text = draggedState.querySelector('text');
-    
-    circle.setAttribute('cx', newX);
-    circle.setAttribute('cy', newY);
-    text.setAttribute('x', newX);
-    text.setAttribute('y', newY);
-    
-    // Actualizar datos de estado manual
-    const stateIndex = manualStates.findIndex(state => state.id === draggedState.dataset.id);
-    if (stateIndex !== -1) {
-        manualStates[stateIndex].x = newX;
-        manualStates[stateIndex].y = newY;
+    if (automaton.finalStates.includes(stateName)) {
+        // Remover estado final
+        circle.removeAttribute('stroke-dasharray');
+        automaton.finalStates = automaton.finalStates.filter(state => state !== stateName);
+    } else {
+        // Agregar estado final
+        circle.setAttribute('stroke-dasharray', '5,5');
+        automaton.finalStates.push(stateName);
     }
-    
-    // Actualizar transiciones conectadas
-    updateConnectedTransitions();
 }
 
-function dropState(event) {
-    if (!draggedState || !isManualMode) return;
-    
-    draggedState.classList.remove('dragging');
-    draggedState = null;
-    
-    updateGeneratedData();
-}
+function handleTransitionState(stateGroup) {
+    if (!transitionStartState) {
+        // Seleccionar estado inicial de la transición
+        transitionStartState = stateGroup;
+        stateGroup.querySelector('circle').setAttribute('stroke', 'yellow');
+    } else {
+        // Crear transición
+        const symbol = prompt('Ingrese el símbolo para la transición:');
+        if (symbol) {
+            const fromState = transitionStartState.dataset.state;
+            const toState = stateGroup.dataset.state;
 
-function selectState(event) {
-    if (!isManualMode) return;
-    
-    const stateGroup = event.currentTarget;
-    const isInitialStateBtn = document.getElementById('set-initial-btn').classList.contains('active');
-    const isFinalStateBtn = document.getElementById('set-final-btn').classList.contains('active');
-    
-    if (isInitialStateBtn) {
-        // Remover estado inicial previo
-        const svg = stateGroup.closest('svg');
-        svg.querySelectorAll('.state-group').forEach(group => {
-            group.querySelector('circle').setAttribute('stroke', 'white');
-        });
-        
-        stateGroup.querySelector('circle').setAttribute('stroke', 'green');
-        stateGroup.classList.add('initial-state');
-    }
-    
-    if (isFinalStateBtn) {
-        stateGroup.classList.toggle('final-state');
-        const circle = stateGroup.querySelector('circle');
-        
-        if (stateGroup.classList.contains('final-state')) {
-            circle.setAttribute('stroke-dasharray', '5,5');
-        } else {
-            circle.removeAttribute('stroke-dasharray');
+            // Agregar transición al autómata
+            if (!automaton.transitions[fromState]) {
+                automaton.transitions[fromState] = {};
+            }
+            automaton.transitions[fromState][symbol] = toState;
+
+            // Dibujar la transición
+            createTransitionArrow(transitionStartState, stateGroup, symbol);
         }
+
+        // Resetear estado inicial de transición
+        transitionStartState.querySelector('circle').setAttribute('stroke', 'white');
+        transitionStartState = null;
     }
-    
-    updateGeneratedData();
 }
 
-function addTransition() {
-    const fromState = document.getElementById('from-state').value;
-    const toState = document.getElementById('to-state').value;
-    const symbol = document.getElementById('symbol').value;
+function createTransitionArrow(fromState, toState, symbol) {
+    const svg = fromState.closest('svg');
+    const fromCircle = fromState.querySelector('circle');
+    const toCircle = toState.querySelector('circle');
 
-    if (!fromState || !toState || !symbol) {
-        alert('Por favor, complete todos los campos');
-        return;
-    }
+    const x1 = parseFloat(fromCircle.getAttribute('cx'));
+    const y1 = parseFloat(fromCircle.getAttribute('cy'));
+    const x2 = parseFloat(toCircle.getAttribute('cx'));
+    const y2 = parseFloat(toCircle.getAttribute('cy'));
 
-    const fromStateEl = document.querySelector(`[data-id="${fromState}"]`);
-    const toStateEl = document.querySelector(`[data-id="${toState}"]`);
-
-    if (!fromStateEl || !toStateEl) {
-        alert('Los estados seleccionados no existen');
-        return;
-    }
-
-    const svg = fromStateEl.closest('svg');
-    
-    const fromX = parseFloat(fromStateEl.querySelector('circle').getAttribute('cx'));
-    const fromY = parseFloat(fromStateEl.querySelector('circle').getAttribute('cy'));
-    const toX = parseFloat(toStateEl.querySelector('circle').getAttribute('cx'));
-    const toY = parseFloat(toStateEl.querySelector('circle').getAttribute('cy'));
-
-    // Crear flecha de transición
+    // Crear línea de transición
     const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-    line.setAttribute('x1', fromX);
-    line.setAttribute('y1', fromY);
-    line.setAttribute('x2', toX);
-    line.setAttribute('y2', toY);
+    line.setAttribute('x1', x1);
+    line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2);
+    line.setAttribute('y2', y2);
     line.setAttribute('stroke', '#ff4081');
+    line.setAttribute('stroke-width', '2');
     line.setAttribute('marker-end', 'url(#arrowhead)');
 
+    // Crear texto de la transición
     const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    text.setAttribute('x', (fromX + toX) / 2);
-    text.setAttribute('y', (fromY + toY) / 2);
+    text.setAttribute('x', (x1 + x2) / 2);
+    text.setAttribute('y', (y1 + y2) / 2 - 10);
     text.setAttribute('text-anchor', 'middle');
     text.setAttribute('fill', '#ff4081');
     text.textContent = symbol;
 
     svg.appendChild(line);
     svg.appendChild(text);
-
-    // Guardar transición
-    manualTransitions.push({
-        from: fromState,
-        to: toState,
-        symbol: symbol
-    });
-
-    updateGeneratedData();
 }
 
-function updateConnectedTransitions() {
-    const svg = document.getElementById('automata-svg');
-    const lines = svg.querySelectorAll('line');
-    const texts = svg.querySelectorAll('text[fill="#ff4081"]');
+function resetAllModes() {
+    isInitialStateMode = false;
+    isFinalStateMode = false;
+    isTransitionMode = false;
+    transitionStartState = null;
 
-    lines.forEach((line, index) => {
-        const fromStateId = line.getAttribute('data-from');
-        const toStateId = line.getAttribute('data-to');
-        
-        const fromStateEl = document.querySelector(`[data-id="${fromStateId}"]`);
-        const toStateEl = document.querySelector(`[data-id="${toStateId}"]`);
-        
-        if (fromStateEl && toStateEl) {
-            const fromX = parseFloat(fromStateEl.querySelector('circle').getAttribute('cx'));
-            const fromY = parseFloat(fromStateEl.querySelector('circle').getAttribute('cy'));
-            const toX = parseFloat(toStateEl.querySelector('circle').getAttribute('cx'));
-            const toY = parseFloat(toStateEl.querySelector('circle').getAttribute('cy'));
-
-            line.setAttribute('x1', fromX);
-            line.setAttribute('y1', fromY);
-            line.setAttribute('x2', toX);
-            line.setAttribute('y2', toY);
-
-            texts[index].setAttribute('x', (fromX + toX) / 2);
-            texts[index].setAttribute('y', (fromY + toY) / 2);
-        }
-    });
+    // Resetear botones
+    document.getElementById('set-initial-btn').classList.remove('active');
+    document.getElementById('set-final-btn').classList.remove('active');
+    document.getElementById('add-transition-mode-btn').classList.remove('active');
 }
+
+// Eventos para los botones de modo
+document.getElementById('set-initial-btn').addEventListener('click', function() {
+    resetAllModes();
+    isInitialStateMode = true;
+    this.classList.add('active');
+});
+
+document.getElementById('set-final-btn').addEventListener('click', function() {
+    resetAllModes();
+    isFinalStateMode = true;
+    this.classList.add('active');
+});
+
+document.getElementById('add-transition-mode-btn').addEventListener('click', function() {
+    resetAllModes();
+    isTransitionMode = true;
+    this.classList.add('active');
+});
 
 function updateGeneratedData() {
-    const statesDisplay = document.getElementById('generated-states');
-    const initialStateDisplay = document.getElementById('generated-initial-state');
-    const finalStatesDisplay = document.getElementById('generated-final-states');
-    const transitionsDisplay = document.getElementById('generated-transitions');
+    const generatedStates = document.getElementById('generated-states');
+    const generatedInitialState = document.getElementById('generated-initial-state');
+    const generatedFinalStates = document.getElementById('generated-final-states');
+    const generatedTransitions = document.getElementById('generated-transitions');
 
-    const states = manualStates.map(state => state.id);
-    const initialState = document.querySelector('.initial-state')?.dataset.id;
-    const finalStates = Array.from(document.querySelectorAll('.final-state')).map(state => state.dataset.id);
-    const transitions = manualTransitions;
-
-    statesDisplay.innerText = `Estados: ${states.join(', ')}`;
-    initialStateDisplay.innerText = `Estado inicial: ${initialState || 'No definido'}`;
-    finalStatesDisplay.innerText = `Estados finales: ${finalStates.join(', ')}`;
-    transitionsDisplay.innerText = `Transiciones: ${transitions.map(t => `${t.from},${t.symbol},${t.to}`).join('; ')}`;
+    generatedStates.textContent = `Estados: ${automaton.states.join(', ')}`;
+    generatedInitialState.textContent = `Estado inicial: ${automaton.initialState || 'No establecido'}`;
+    generatedFinalStates.textContent = `Estados finales: ${automaton.finalStates.join(', ') || 'Ninguno'}`;
+    
+    // Formatear transiciones para mostrar
+    const transitionStrings = [];
+    Object.entries(automaton.transitions).forEach(([fromState, transitions]) => {
+        Object.entries(transitions).forEach(([symbol, toState]) => {
+            transitionStrings.push(`${fromState},${symbol},${toState}`);
+        });
+    });
+    generatedTransitions.textContent = `Transiciones: ${transitionStrings.join('; ') || 'Ninguna'}`;
 }
 
 function drawAutomata() {
@@ -641,44 +498,3 @@ function validateString() {
         resultElement.className = 'rejected show';
     }
 }
-
-// Add event listeners for transition mode button
-document.getElementById('add-transition-mode-btn').addEventListener('click', toggleTransitionMode);
-
-function toggleTransitionMode() {
-    isTransitionMode = !isTransitionMode;
-    const btn = document.getElementById('add-transition-mode-btn');
-    btn.classList.toggle('active');
-
-    // Reset any previous transition start state
-    if (transitionStartState) {
-        transitionStartState.querySelector('circle').setAttribute('stroke', 'white');
-        transitionStartState = null;
-    }
-}
-// Add event listeners for initial and final state buttons
-document.getElementById('set-initial-btn').addEventListener('click', function() {
-    const btn = document.getElementById('set-initial-btn');
-    btn.classList.toggle('active');
-    
-    // Deactivate other mode buttons
-    document.getElementById('set-final-btn').classList.remove('active');
-    document.getElementById('add-transition-mode-btn').classList.remove('active');
-    
-    // Reset transition mode
-    isTransitionMode = false;
-    transitionStartState = null;
-});
-
-document.getElementById('set-final-btn').addEventListener('click', function() {
-    const btn = document.getElementById('set-final-btn');
-    btn.classList.toggle('active');
-    
-    // Deactivate other mode buttons
-    document.getElementById('set-initial-btn').classList.remove('active');
-    document.getElementById('add-transition-mode-btn').classList.remove('active');
-    
-    // Reset transition mode
-    isTransitionMode = false;
-    transitionStartState = null;
-});

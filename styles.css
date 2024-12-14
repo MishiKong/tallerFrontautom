@@ -185,15 +185,30 @@ button:hover {
 
 /* Generated Data */
 #generated-data {
-    display: none;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px auto;
+    max-width: 800px;
+    backdrop-filter: blur(5px);
+}
+
+#generated-data h3 {
+    color: #fff;
+    margin-bottom: 15px;
     text-align: center;
-    margin-top: 20px;
 }
 
 #generated-data p {
-    font-size: 18px;
-    font-weight: bold;
     color: #fff;
+    margin: 10px 0;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+}
+
+#generated-data strong {
+    color: #ff4081;
 }
 
 /* Manual Transitions */
@@ -260,11 +275,13 @@ button:hover {
     }
 }
 
-#manual-transitions button {
-    transition: background-color 0.3s ease;
+button.active {
+    background: linear-gradient(135deg, #ff4081, #ff0055);
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(255, 64, 129, 0.5);
 }
 
-#manual-transitions button.active {
-    background: linear-gradient(135deg, #43e97b, #38f9d7);
-    box-shadow: 0 0 15px rgba(67, 233, 123, 0.5);
+#automata-svg {
+    cursor: default;
+    transition: cursor 0.3s ease;
 }
